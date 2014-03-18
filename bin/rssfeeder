@@ -1,0 +1,166 @@
+#!/usr/bin/perl -w
+# (c) 2007 S. Smeenk <ssmeenk@freshdot.net>
+# GPLv2 
+use strict;
+use POSIX qw/setsid getpid strftime/;
+use Unix::Syslog qw/:macros :subs/;
+use LWP;
+use LWP::UserAgent;
+use Digest::MD5 qw(md5_hex);
+
+## Config stuff :)
+my $SERVICE   = "rssfeeder";
+my $PIDFILE   = $ENV{'HOME'} . '/.irssi/irssi-rss/rssfeeder.pid';
+my $FEEDSFILE = $ENV{'HOME'} . '/.irssi/irssi-rss/rssfeeder.lst';
+my $FEEDSTMP  = $ENV{'HOME'} . '/.irssi/irssi-rss/';
+my $DELAY     = 300; # seconds between rss retrieval
+
+## Internals :)
+my $UA        = LWP::UserAgent->new; $UA->agent('irssi-rss');
+my $NOISY     = 1; # Default to printing stuff on STOUD/STDERR
+$0 = $SERVICE;
+
+if ( ! -d $FEEDSTMP ) {
+	mkdir $FEEDSTMP || die "Sorry, $FEEDSTMP doesn't exist, and mkdir failed: $!\n";
+}
+
+checkargs();
+checkself();
+daemonize();
+opensyslog();
+writepid();
+
+while (1) { main(); sleep $DELAY; }
+
+exit 0;
+
+# ###
+## ## 
+### #
+
+sub main {
+	if (open (FD, "<$FEEDSFILE")) {
+		while (my $feed = <FD>) {
+			chomp($feed);
+			my ($feedtag, $feedurl) = $feed =~ /^(.+?)\s(.+?)$/;
+
+			my $filename = $FEEDSTMP . "rssfeeder_" . md5_hex($feedurl);
+			
+			my $result = $UA->mirror($feedurl, $filename);
+		
+			if ($result->code == 200) { 
+				# Everything OK, file saved by $UA->mirror()
+			} elsif ($result->code == 304) {
+				# Everything OK, just not modified :)
+			} else {
+				syslog LOG_WARNING, "rss feed $feedtag on $feedurl returned ".$result->code;
+			}
+		}
+	} else {
+		syslog LOG_NOTICE, "unable to read from $FEEDSFILE: $!";
+	}		
+}
+
+sub opensyslog {
+	my $OPTIONS  = LOG_CONS | LOG_PID;
+	my $FACILITY = LOG_DAEMON;
+	openlog $SERVICE, $OPTIONS, $FACILITY;
+	syslog LOG_NOTICE, "$SERVICE starting.";
+}
+
+sub suicide {
+	open (FD, "<$PIDFILE") or die "($$) cannot open $PIDFILE: $!\n";
+	my $childpid = <FD>;
+	close (FD);
+	if (!$childpid || ($childpid !~ /^\d+$/)) {
+		print "($$) incorrect format $PIDFILE. bailing out.\n" if $NOISY;
+		exit 0;
+	}
+	if (not kill(0, $childpid)) {
+		print "($$) stale $PIDFILE. no process '$childpid'.\n" if $NOISY;
+		print "($$) unlinking $PIDFILE. nothing to kill.\n" if $NOISY;
+		unlink $PIDFILE or die "($$) cannot unlink $PIDFILE: $!\n" if $NOISY;
+		exit 0;
+	} else {
+		print "($$) found active process '$childpid' from $PIDFILE.\n" if $NOISY;
+		if (not kill(9, $childpid)) {
+			die "($$) no process '$childpid'. this is weird mm'kay?\n";
+		} else {
+			print "($$) killed $childpid. unlinking $PIDFILE.\n" if $NOISY;
+			unlink $PIDFILE or die "($$) cannot unlink $PIDFILE: $!\n";
+		}
+	}
+}
+
+sub checkargs {
+
+	foreach my $ARG (@ARGV) {
+		if ($ARG =~ /--kill/) {
+			print "($$) killing $SERVICE.\n" if $NOISY;
+			suicide(); exit;
+		} elsif ($ARG =~ /--cron/) {
+			$NOISY = 0; # No more output from this point. only syslog.
+		} elsif ($ARG !~ /--(kill|cron)/) {
+			showhelp(); exit;
+		}
+	}
+	print "($$) $SERVICE starting.\n" if $NOISY;
+}
+
+sub showhelp {
+	my $basename = reverse(substr(reverse($0),0,index(reverse($0),'/')));
+	print "($$) $SERVICE\n";
+	print "($$)\n";
+	print "($$) usage: $basename [args]\n";
+	print "($$)\n";
+	print "($$) where [args] can be a combination of:\n";
+	print "($$)  --kill     : Kills a possibly running pptp checker by looking\n";
+	print "($$)               up the pid from $PIDFILE\n";
+	print "($$)  --cron     : Silent operation. Only syslog output\n";
+	print "($$)\n";
+	print "($$) reads rss feeds from file $FEEDSFILE\n";
+}
+
+sub writepid {
+	if (open (FD, ">$PIDFILE")) {
+		print FD getpid();
+		close (FD);
+	} else {
+		syslog(LOG_WARNING, "could not write pidfile $PIDFILE: %m");
+	}
+}
+
+sub daemonize {
+	chdir '/'                or die "($$) Can't chdir to /: $!\n";
+#	open STDIN,  '/dev/null' or die "($$) Can't read /dev/null: $!\n";
+#	open STDOUT, '/dev/null' or die "($$) Can't write to /dev/null: $!\n";
+
+	print STDERR "($$) ready to fork. closed stdin & stdout.\n" if $NOISY; 
+
+	defined(my $pid = fork)  or die "($$) Can't fork(): $!\n";
+	print STDERR "($$) forked process $pid. take care!\n" if ($pid && $NOISY);
+	exit if $pid;
+	my $c = getpid();
+	print STDERR "($c) thanks! child taking over, have a nice day.\n" if $NOISY;
+	setsid()                 or die "($$) Can't start a new session: $!\n";
+#	open STDERR, '>&STDOUT'  or die "($$) Can't redirect STDERR: $!\n";
+}
+
+sub checkself {
+	my $pid = "empty";
+
+	if (open (FD, $PIDFILE)) {
+		$pid = <FD>;
+		close (FD);
+	}
+
+	if (($pid && ($pid =~ /^\d+$/)) && (kill (0, $pid))) {
+		print "($$) already active as process '$pid'\n" if $NOISY;
+		exit 0;
+	}
+	if (($pid && ($pid =~ /^\d+$/)) && (not kill (0, $pid))) {
+		print "($$) stale $PIDFILE. '$pid' no longer active!\n" if $NOISY;
+		print "($$) unlinking $PIDFILE and doing normal startup.\n" if $NOISY;
+		unlink $PIDFILE or die "($$) Can't unlink $PIDFILE: $!\n";
+	}
+}

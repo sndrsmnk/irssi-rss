@@ -7,39 +7,35 @@ This repository consists of the following files:
 
 bin/rssfeeder
 -------------
-	This is the daemon that requests the RSS/XML feeds with some
+This is the daemon that requests the RSS/XML feeds with some
 interval. It will store the data in ~/.irssi/irssi-rss/rssfeeder_<hash>
 or irssi-rss.pl to read, parse and display. This little daemon runs in
 the background, and by default checks the feeds every five minutes.
 Since rssfeeder keeps track of itself, you can put this in cron like so:
-
-@hourly rssfeeder --cron
-
+    @hourly rssfeeder --cron
 and it will automatically restart, if it might die for some reason.
 
 
 .irssi/irssi-rss/rssfeeder.lst
 ------------------------------
-	This file contains all the feeds you want to display in irssi. As an
+This file contains all the feeds you want to display in irssi. As an
 example, slashdot is included. The syntax is fairly simple, a unique
 tag, and a direct URL to the RSS feed on a single line is enough. So if
 you were to add the Debian Security Advisory RSS feed you'd add the line:
-
-DSA http://www.debian.org/security/dsa.rdf
-
+    DSA http://www.debian.org/security/dsa.rdf
 to this file, and rssfeeder will automatically pick it up after a while.
 
 
 .irssi/script/irssi-rss.pl
 --------------------------
-	This is the perl script that you will load in irssi to parse the
+This is the perl script that you will load in irssi to parse the
 feeds and maintain a record on what has been announced and what is new
 news. By default it checks for new items every 10 seconds.
 
 
 .irssi/script/autorun/irssi-rss.pl
 ----------------------------------
-	This is a symlink, so irssi-rss gets loaded automatically at
+This is a symlink, so irssi-rss gets loaded automatically at
 startup. You may remove this if you don't want irssi-rss to be loaded at
 irssi startup automatically.
 
@@ -56,17 +52,21 @@ A short description of the available options inside irssi:
 
 /rss list
 	Will show all news items
+
 /rss list <feedtag>
 	Will show all news items for this specific feed-tag.
+
 /rss reset
 	Will reset the "statehash". This causes all old items to be
 	announced again, but it will also free the memory claimed by the
 	statehash which, in this version, keeps growing and growing ;)
+
 /rss say <tag-item#>
 	Will publically announce the specific news item to the current
 	window. Please ensure yourself that you are announcing the correct
 	item, since positions will change. Newest items are always at the
 	beginning.
+
 /rss help
 	Although advertised, will not do anything yet ;)
 

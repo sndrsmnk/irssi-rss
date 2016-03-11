@@ -9,7 +9,7 @@ bin/rssfeeder
 -------------
 This is the daemon that requests the RSS/XML feeds with some
 interval. It will store the data in `~/.irssi/irssi-rss/rssfeeder_<hash>`
-or `irssi-rss.pl` to read, parse and display. This little daemon runs in
+for `irssi-rss.pl` to read, parse and display. This little daemon runs in
 the background, and by default checks the feeds every five minutes.
 Since rssfeeder keeps track of itself, you can put this in cron like so:
 
@@ -36,6 +36,19 @@ This is the perl script that you will load in irssi to parse the
 feeds and maintain a record on what has been announced and what is new
 news. By default it checks for new items every 10 seconds.
 
+TIP: Look for the 'filterURL' subroutine in this source code. You can
+manipulate the URL of an item just before it gets announced. You can for
+example make URLs like:
+
+    http://example.tld/news/12345/abc/rss/long-useless-news-item-title-here.html
+
+Appear as:
+
+    http://example.tld/news/12345/abc/rss.html
+    
+This works for most sites. The numbers and letters in the URL are significant, the
+rest of the path is not.
+
 
 .irssi/script/autorun/irssi-rss.pl
 ----------------------------------
@@ -46,11 +59,10 @@ irssi startup automatically.
 
 Controls within irssi
 ---------------------
-
 The script binds a new command `/rss` in irssi. You can use this to
 review the feeds, or publically announce items you find interessting
 enough to share with your IRC friends. By default, `irssi-rss.pl` will
-*NOT* announce the news items publically.
+*NOT* announce the news items publically, but it can do so if desired.
 
 A short description of the available options inside irssi:
 
@@ -62,12 +74,11 @@ A short description of the available options inside irssi:
 
 `/rss say <tag-item#>` Will publically announce the specific news item to the current window. Please ensure yourself that you are announcing the correct item, since positions will change. Newest items are always at the beginning.
 
-`/rss help` Although advertised, will not do anything yet ;)
+`/rss help` Will show a short summary of supported commands.
 
 
-DEPENDENCIES
-------------
-
+Dependencies
+============
 rssfeeder, the deamon that retrieves the RSS feeds, depends on:
 
 * `Unix::Syslog`, provided by Debian package libunix-syslog-perl
@@ -81,9 +92,8 @@ irssi-rss.pl, the irssi loadable script, depends on:
 * And the modules provided by irssi itself.
 
 
-ANNOUNCES
----------
-
+Binding announcements to a single window
+========================================
 By default, news announcements will go to the currently active window.
 If you do not like this, you can name a window 'irssi-rss' and this will
 cause all announcements to go to that window instead of the current
@@ -92,12 +102,14 @@ window, and type:
 
 	/window name irssi-rss
 
-The next announcements will go to that window, instead of the current
+The next announcements will go to that window instead of the current
 active window.
 
 
 QUESTIONS, COMMENTS
 -------------------
+I have personally switched to using a selfhosted installation of
+https://tt-rss.org/ in a browser window. It combines nice with
+the tt-rss (Android) app.
 
-Please direct all questions, comments, improvements and other such
-mail to me at the address ssmeenk@freshdot.net.
+With questions, comments, bugs, improvements and such, feel free to contact me: https://github.com/sndrsmnk/

@@ -18,7 +18,7 @@ $VERSION = "0.6";
     name        => 'irssi-rss',
     description => 'Reads stored RSS streams and displays newest news!',
     license     => 'GPLv2',
-    url         => 'http://www.freshdot.net/irssi.shtml',
+    url         => 'http://github.com/sndrsmnk/irssi-rss',
 );
 
 my $feedsfile = $ENV{'HOME'} . '/.irssi/irssi-rss/rssfeeder.lst';
@@ -43,12 +43,12 @@ sub _parse_rss {
 				delete $$rssobject{lc($feedtag)} if exists $$rssobject{lc($feedtag)};
 				while ($xml =~ /<(?:entry|item)[^>]*>(.*?)<\/(?:entry|item)>/isg) {
 					my $item = $1;
-					my ($link, $titel);
+					my ($link, $title);
 					if ($item =~ /<title>(.*?)<\/title>/i) {
-						$titel = $1;
-						$titel =~ s/&#(x[0-9a-fA-F]+|[0-9]+);/chr($1)/eg;
-						while ($titel =~ /&amp;/i) { $titel =~ s/&amp;/\&/gi }
-						$titel =~ s/\s\s+/ /;
+						$title = $1;
+						$title =~ s/&#(x[0-9a-fA-F]+|[0-9]+);/chr($1)/eg;
+						while ($title =~ /&amp;/i) { $title =~ s/&amp;/\&/gi }
+						$title =~ s/\s\s+/ /;
 
 						# Try and find the link. Use permalinks when possible.
 						if ($item =~ /<feedburner:origlink>(.*?)<\/feedburner:origlink>/i) {
@@ -63,8 +63,8 @@ sub _parse_rss {
 						while ($link =~ /&amp;/i) { $link =~ s/&amp;/\&/gi }
 					}
 
-					if ($link and $titel) {
-						push @{$$rssobject{lc($feedtag)}}, [ $link, $titel ];
+					if ($link and $title) {
+						push @{$$rssobject{lc($feedtag)}}, [ $link, $title ];
 					}
 				}
 			}
@@ -79,7 +79,7 @@ sub _rss_item_find {
 	if (!$tag) { msg("No tag specified. See /rss help for information."); return; }
 
 	# Remember those days... LTRIM() and RTRIM()...
-	$tag =~ s/^\s+//g; $tag =~ s/\s+$//g;
+	$tag =~ s/^\s*(.*)\s*$/$1/;
 	my ($feedtag, $feeditem) = $tag =~ /^(.+?)-(\d+)$/;
 
 	_parse_rss();

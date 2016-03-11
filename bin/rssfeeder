@@ -68,25 +68,25 @@ sub opensyslog {
 	syslog LOG_NOTICE, "$SERVICE starting.";
 }
 
-sub suicide {
+sub kill_daemon {
 	open (FD, "<$PIDFILE") or die "($$) cannot open $PIDFILE: $!\n";
 	my $childpid = <FD>;
 	close (FD);
 	if (!$childpid || ($childpid !~ /^\d+$/)) {
-		print "($$) incorrect format $PIDFILE. bailing out.\n" if $NOISY;
+		dprint("($$) incorrect format $PIDFILE. bailing out.\n");
 		exit 0;
 	}
 	if (not kill(0, $childpid)) {
-		print "($$) stale $PIDFILE. no process '$childpid'.\n" if $NOISY;
-		print "($$) unlinking $PIDFILE. nothing to kill.\n" if $NOISY;
-		unlink $PIDFILE or die "($$) cannot unlink $PIDFILE: $!\n" if $NOISY;
+		dprint("($$) stale $PIDFILE. no process '$childpid'.\n");
+		dprint("($$) unlinking $PIDFILE. nothing to kill.\n");
+		unlink $PIDFILE or die "($$) cannot unlink $PIDFILE: $!\n";
 		exit 0;
 	} else {
-		print "($$) found active process '$childpid' from $PIDFILE.\n" if $NOISY;
+		dprint("($$) found active process '$childpid' from $PIDFILE.\n");
 		if (not kill(9, $childpid)) {
 			die "($$) no process '$childpid'. this is weird mm'kay?\n";
 		} else {
-			print "($$) killed $childpid. unlinking $PIDFILE.\n" if $NOISY;
+			dprint("($$) killed $childpid. unlinking $PIDFILE.\n");
 			unlink $PIDFILE or die "($$) cannot unlink $PIDFILE: $!\n";
 		}
 	}
@@ -96,15 +96,15 @@ sub checkargs {
 
 	foreach my $ARG (@ARGV) {
 		if ($ARG =~ /--kill/) {
-			print "($$) killing $SERVICE.\n" if $NOISY;
-			suicide(); exit;
+			dprint("($$) killing $SERVICE.\n");
+			kill_daemon(); exit;
 		} elsif ($ARG =~ /--cron/) {
 			$NOISY = 0; # No more output from this point. only syslog.
 		} elsif ($ARG !~ /--(kill|cron)/) {
 			showhelp(); exit;
 		}
 	}
-	print "($$) $SERVICE starting.\n" if $NOISY;
+	dprint("($$) $SERVICE starting.\n");
 }
 
 sub showhelp {
@@ -135,13 +135,14 @@ sub daemonize {
 #	open STDIN,  '/dev/null' or die "($$) Can't read /dev/null: $!\n";
 #	open STDOUT, '/dev/null' or die "($$) Can't write to /dev/null: $!\n";
 
-	print STDERR "($$) ready to fork. closed stdin & stdout.\n" if $NOISY; 
-
+	dprint("($$) ready to fork. closed stdin & stdout.\n"); 
 	defined(my $pid = fork)  or die "($$) Can't fork(): $!\n";
-	print STDERR "($$) forked process $pid. take care!\n" if ($pid && $NOISY);
+
+	dprint("($$) forked process $pid. take care!\n") if ($pid);
 	exit if $pid;
+
 	my $c = getpid();
-	print STDERR "($c) thanks! child taking over, have a nice day.\n" if $NOISY;
+	dprint("($c) thanks! child taking over, have a nice day.\n");
 	setsid()                 or die "($$) Can't start a new session: $!\n";
 #	open STDERR, '>&STDOUT'  or die "($$) Can't redirect STDERR: $!\n";
 }
@@ -155,12 +156,19 @@ sub checkself {
 	}
 
 	if (($pid && ($pid =~ /^\d+$/)) && (kill (0, $pid))) {
-		print "($$) already active as process '$pid'\n" if $NOISY;
+		dprint("($$) already active as process '$pid'\n");
 		exit 0;
 	}
 	if (($pid && ($pid =~ /^\d+$/)) && (not kill (0, $pid))) {
-		print "($$) stale $PIDFILE. '$pid' no longer active!\n" if $NOISY;
-		print "($$) unlinking $PIDFILE and doing normal startup.\n" if $NOISY;
+		dprint("($$) stale $PIDFILE. '$pid' no longer active!\n");
+		dprint("($$) unlinking $PIDFILE and doing normal startup.\n");
 		unlink $PIDFILE or die "($$) Can't unlink $PIDFILE: $!\n";
 	}
+}
+
+sub dprint {
+    return unless $NOISY;
+    my ($msg) = @_;
+    $msg =~ s/\n$//g;
+    print $msg . "\n";
 }

@@ -8,8 +8,8 @@ This repository consists of the following files:
 bin/rssfeeder
 -------------
 This is the daemon that requests the RSS/XML feeds with some
-interval. It will store the data in ~/.irssi/irssi-rss/rssfeeder_<hash>
-or irssi-rss.pl to read, parse and display. This little daemon runs in
+interval. It will store the data in `~/.irssi/irssi-rss/rssfeeder_<hash>`
+or `irssi-rss.pl` to read, parse and display. This little daemon runs in
 the background, and by default checks the feeds every five minutes.
 Since rssfeeder keeps track of itself, you can put this in cron like so:
 

@@ -44,7 +44,7 @@ sub _parse_rss {
 				while ($xml =~ /<(?:entry|item)[^>]*>(.*?)<\/(?:entry|item)>/isg) {
 					my $item = $1;
 					my ($link, $title);
-					if ($item =~ /<title>(.*?)<\/title>/i) {
+					if ($item =~ /<title[^>]*>(.*?)<\/title>/i) {
 						$title = $1;
 						$title =~ s/&#(x[0-9a-fA-F]+|[0-9]+);/chr($1)/eg;
 						while ($title =~ /&amp;/i) { $title =~ s/&amp;/\&/gi }
